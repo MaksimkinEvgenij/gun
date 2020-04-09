@@ -26,7 +26,6 @@ class Ball:
             fill=self.color
         )
 
-
     def set_coords(self):
         playground.coords(
             self.id,
@@ -67,7 +66,12 @@ class Ball:
 class Gun:
     def __init__(self):
         self.fire_power = 10
-        self.f2_on = 0
+        self.firing_on = 0
+
+        self.set_gun_position()
+
+    def set_gun_position(self):
+        """ Установка стартовой позиции пушки."""
         self.angle = 1
         self.start_pos_x = 20
         self.start_pos_y = 450
@@ -80,7 +84,7 @@ class Gun:
 
         Происходит при нажатие до отпускания мыши.
         """
-        self.f2_on = 1
+        self.firing_on = 1
 
     def firing(self, event):
         """Выстрел мячом.
@@ -96,7 +100,7 @@ class Gun:
         vy = - self.fire_power * math.sin(self.angle)
         balls.append(Ball(self.end_pos_x, self.end_pos_y, vx, vy))
 
-        self.f2_on = 0
+        self.firing_on = 0
         self.fire_power = 10
 
     def targetting(self, event=0):
@@ -105,7 +109,7 @@ class Gun:
             if event.x - self.start_pos_x != 0:
                 self.angle = math.atan((event.y - self.start_pos_y) / (event.x - self.start_pos_x))
 
-        if self.f2_on:  # выстрел
+        if self.firing_on:  # выстрел
             playground.itemconfig(self.id, fill='orange')
         else:
             playground.itemconfig(self.id, fill='black')
@@ -119,7 +123,7 @@ class Gun:
 
     def power_up(self):
         """ Изменяет силу выстрела. """
-        if self.f2_on:
+        if self.firing_on:
             if self.fire_power < 100:
                 self.fire_power += 1
             playground.itemconfig(self.id, fill='orange')
@@ -146,26 +150,25 @@ class Target:
         playground.coords(self.id, -10, -10, -10, -10)
         self.points += points
         playground.itemconfig(self.id_points, text=self.points)
+        self.live = 0
 
 
 def game():
-    while target.live or balls:
-        for b in balls:
-            b.move()
-            if b.hittest(target) and target.live:
-                target.live = 0
-                target.hit()
-                #playground.bind('<Button-1>', '')
-                #playground.bind('<ButtonRelease-1>', '')
-                playground.itemconfig(message_screen, text='Вы уничтожили цель за ' + str(amount_of_shots) + ' выстрелов')
-                return
-        playground.update()
-        time.sleep(0.03)
-        gun.targetting()
-        gun.power_up()
-    playground.itemconfig(message_screen, text='')
-    playground.delete(Gun)
-    root.after(750, game)
+    """ Игра. """
+
+    for b in balls:
+        b.move()
+        if b.hittest(target) and target.live:
+            target.hit()
+            playground.itemconfig(message_screen,
+                                  text='Вы уничтожили цель за ' + str(amount_of_shots) + ' выстрелов')
+            return
+    playground.update()
+    time.sleep(0.03)
+    gun.targetting()
+    gun.power_up()
+    root.after(10, game)
+
 
 
 root = tk.Tk()
@@ -174,12 +177,15 @@ root.geometry('800x600')
 playground = tk.Canvas(root, bg='white')
 playground.pack(fill=tk.BOTH, expand=1)
 
+message_screen = playground.create_text(400, 300, text='', font='28')
+
+
 amount_of_shots = 0
 balls = []
 
-target = Target()
 
-message_screen = playground.create_text(400, 300, text='', font='28')
+
+target = Target()
 
 gun = Gun()
 
