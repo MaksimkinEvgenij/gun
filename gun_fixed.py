@@ -148,23 +148,24 @@ class Target:
         playground.itemconfig(self.id_points, text=self.points)
 
 
-def new_game():
+def game():
     while target.live or balls:
         for b in balls:
             b.move()
             if b.hittest(target) and target.live:
                 target.live = 0
                 target.hit()
-                playground.bind('<Button-1>', '')
-                playground.bind('<ButtonRelease-1>', '')
+                #playground.bind('<Button-1>', '')
+                #playground.bind('<ButtonRelease-1>', '')
                 playground.itemconfig(message_screen, text='Вы уничтожили цель за ' + str(amount_of_shots) + ' выстрелов')
+                return
         playground.update()
         time.sleep(0.03)
         gun.targetting()
         gun.power_up()
     playground.itemconfig(message_screen, text='')
     playground.delete(Gun)
-    root.after(750, new_game)
+    root.after(750, game)
 
 
 root = tk.Tk()
@@ -186,6 +187,6 @@ playground.bind('<Button-1>', gun.fire_starter)
 playground.bind('<ButtonRelease-1>', gun.firing)
 playground.bind('<Motion>', gun.targetting)
 
-new_game()
+game()
 
 root.mainloop()
