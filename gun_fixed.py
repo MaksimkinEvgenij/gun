@@ -58,20 +58,6 @@ class Ball:
         self.y = 10
         self.set_coords()
 
-    def hittest(self, obj):
-        """Функция проверяет сталкивалкивается ли данный обьект с целью, описываемой в обьекте obj.
-
-        Args:
-            obj: Обьект, с которым проверяется столкновение.
-        Returns:
-            Возвращает True в случае столкновения мяча и цели. В противном случае возвращает False.
-        """
-
-        if ((self.x - obj.x) ** 2 + (self.y - obj.y) ** 2) ** (1 / 2) <= self.r + obj.r:
-            return True
-
-        return False
-
 
 class Gun:
     def __init__(self, game):
@@ -169,8 +155,6 @@ class Target:
 
         self.make_a_move()
 
-        # self.id_points = self.game.playground.create_text(30, 30, text=self.points, font='28')  # очки?
-
     def hit(self, points=1):
         """Попадание шарика в цель."""
         self.game.playground.coords(self.id, -10, -10, -10, -10)
@@ -182,7 +166,6 @@ class Target:
         """ Задание движения целям. """
 
         self.y += self.vy
-
         self.set_coords()
 
         if self.y - self.r <= 0 or self.y + self.r >= self.game.window_height:
@@ -205,39 +188,13 @@ class Target:
         del self
 
 
-def game():
-    """ Игра. """
-
-    for b in balls:
-        b.move()
-        if b.hittest(target) and target.live:
-            target.hit()
-            playground.create_text(400, 300,
-                                   text='Вы уничтожили цель за ' + str(amount_of_shots) + ' выстрелов',
-                                   font='28')
-            return
-    playground.update()
-    time.sleep(0.03)
-    gun.targetting()
-    gun.power_up()
-    root.after(10, game)
-
-
-def binds():
-    playground.bind('<Button-1>', gun.fire_starter)
-    playground.bind('<ButtonRelease-1>', gun.firing)
-    playground.bind('<Motion>', gun.targetting)
-
-
 class GunGame:
     def __init__(self):
         self.set_variables()
         self.set_constants()
 
         self.build_playground()
-
         self.create_gun()
-
         self.create_targets(number_of_targets=40)
 
         self.binds()
@@ -297,10 +254,8 @@ class GunGame:
 
     def create_targets(self, number_of_targets):
         """ Создание целей."""
-
         for i in range(number_of_targets):
             self.targets[i] = Target(self)
-        # self.target = Target(self)
 
     def start_game(self):
         """ Игровой процесс. """
@@ -321,37 +276,13 @@ class GunGame:
             target.remove()
             self.update_score()
 
-            # self.playground.delete(ball.id)
-
-            # self.playground.delete(target.id)
+            self.delete_object_picture_from_playground(ball.id)
+            self.delete_object_picture_from_playground(target.id)
             # del self.balls[0]
             # del ball
 
+    def delete_object_picture_from_playground(self, object_id):
+        self.playground.delete(object_id)
 
-gg = GunGame()
-
-'''
-
-root = tk.Tk()
-root.geometry('800x600')
-
-
-playground = tk.Canvas(root, bg='white')
-playground.pack(fill=tk.BOTH, expand=1)
-
-
-
-amount_of_shots = 0
-balls = []
-
-
-
-target = Target()
-gun = Gun()
-
-binds()
-
-game()
-
-root.mainloop()
-'''
+if __name__ == '__main__':
+    game = GunGame()
