@@ -45,18 +45,11 @@ class Ball:
         self.x и self.y с учетом скоростей self.vx и self.vy, силы гравитации, действующей на мяч,
         и стен по краям окна (размер окна 800х600).
         """
-        print(self.id)
+        # (self.id)
         self.x += self.vx
         self.y -= self.vy
         self.set_coords()
         self.moving = self.game.root.after(100, self.move)
-
-    def remove(self):
-        """ Убирает шар с игрового поля. """
-        self.game.root.after_cancel(self.moving)
-        self.x = 10
-        self.y = 10
-        self.set_coords()
 
 
 class Gun:
@@ -102,6 +95,8 @@ class Gun:
         self.game.root.after_cancel(self.changing_power)
 
         self.redraw_gun()
+
+        self.game.update_amount_of_shots()
 
     def targetting(self, event=0):
         """Прицеливание. Зависит от положения мыши."""
@@ -179,14 +174,6 @@ class Target:
                                     self.x - self.r, self.y - self.r,
                                     self.x + self.r, self.y + self.r)
 
-    def remove(self):
-        """Убирает цель с игрового поля."""
-        self.game.root.after_cancel(self.moving)
-        self.x = 50
-        self.y = 300
-        self.set_coords()
-        del self
-
 
 class GunGame:
     def __init__(self):
@@ -195,17 +182,16 @@ class GunGame:
 
         self.build_playground()
         self.create_gun()
-        self.create_targets(number_of_targets=40)
+        self.create_targets(number_of_targets=self.number_of_targets)
 
         self.binds()
 
-        self.start_game()
+        self.checking_collisions()
 
         self.root.mainloop()
 
     def set_variables(self):
         """ Переменные для работы игры. """
-        self.amount_of_shots = 0
         self.balls = {}
         self.balls_last_position = 0
         self.targets = {}
@@ -216,11 +202,15 @@ class GunGame:
         """ Константы для работы игры. """
         self.window_width = 800
         self.window_height = 600
+        self.number_of_targets = 40
 
     def build_playground(self):
         """ Создание окна - игрового поля. """
         self.root = tk.Tk()
         self.root.geometry(f'{self.window_width}x{self.window_height}')
+
+        self.reload_button = tk.Button(self.root, text='reload', command=self.reload_game)
+        self.reload_button.pack()
 
         self.playground = tk.Canvas(self.root, bg='white')
         self.playground.pack(fill=tk.BOTH, expand=1)
@@ -230,12 +220,38 @@ class GunGame:
         self.text_score = self.playground.create_text(
             30, 50, text=f'Счет {self.score}', font=20)
 
-    def update_score(self):
-        self.score += 1
+    def reload_game(self):
+        """ Перезапуск игры по нажатию соответствующей кнопки. """
+
+        targets = {i: self.targets[i] for i in self.targets}
+        balls = {i: self.balls[i] for i in self.balls}
+
+        for i in targets:
+            self.del_target(i)
+
+        for i in balls:
+            self.del_ball(i)
+
+        self.set_variables()
+        self.update_score(0)
+        self.update_amount_of_shots(0)
+
+        self.create_targets(number_of_targets=self.number_of_targets)
+
+    def update_score(self, score=None):
+        """ Обновить счет подбитых мишеней. """
+        if score is not None:
+            self.score = score
+        else:
+            self.score += 1
         self.playground.itemconfig(self.text_score, text=f'Счет {self.score}')
 
-    def update_amount_of_shots(self):
-        self.amount_of_shots += 1
+    def update_amount_of_shots(self, amount_of_shots=None):
+        """ Обновить счет выстрелов. """
+        if amount_of_shots is not None:
+            self.amount_of_shots = amount_of_shots
+        else:
+            self.amount_of_shots += 1
         self.playground.itemconfig(self.text_amount_of_shots, text=f'Выстрелов {self.amount_of_shots}')
 
     def binds(self):
@@ -251,38 +267,49 @@ class GunGame:
     def create_ball(self, start_x, srart_y, vx, vy):
         """ Создание шара. """
         self.balls[self.balls_last_position] = Ball(self, start_x, srart_y, vx, vy, )
+        self.balls_last_position += 1
 
     def create_targets(self, number_of_targets):
         """ Создание целей."""
         for i in range(number_of_targets):
             self.targets[i] = Target(self)
 
-    def start_game(self):
+    def checking_collisions(self):
         """ Игровой процесс. """
-        for position_of_ball in self.balls:
-            for position_of_target in self.targets:
-                self.check_collision(self.balls[position_of_ball],
-                                     self.targets[position_of_target]
+
+        balls = {i: self.balls[i] for i in self.balls}
+        targets = {i: self.targets[i] for i in self.targets}
+
+        for position_of_ball in balls:
+            for position_of_target in targets:
+                self.check_collision(position_of_ball,
+                                     position_of_target
                                      )
 
-        self.root.after(10, self.start_game)
+        self.root.after(10, self.checking_collisions)
 
-    def check_collision(self, ball, target):
+    def check_collision(self, position_of_ball, position_of_target):
         """ Проверка попадание шара в цель."""
+        if position_of_ball not in self.balls or position_of_target not in self.targets:
+            return
+        ball = self.balls[position_of_ball]
+        target = self.targets[position_of_target]
+
         if ((ball.x - target.x) ** 2 + (ball.y - target.y) ** 2) ** (1 / 2) <= ball.r + target.r:
-            print(5)
-
-            ball.remove()
-            target.remove()
             self.update_score()
+            self.del_ball(position_of_ball)
+            self.del_target(position_of_target)
 
-            self.delete_object_picture_from_playground(ball.id)
-            self.delete_object_picture_from_playground(target.id)
-            # del self.balls[0]
-            # del ball
+    def del_ball(self, position_of_ball):
+        """Удалить шар по ключу в словаре шаров. """
+        self.playground.delete(self.balls[position_of_ball].id)
+        del self.balls[position_of_ball]
 
-    def delete_object_picture_from_playground(self, object_id):
-        self.playground.delete(object_id)
+    def del_target(self, position_of_target):
+        """ Удалить мишень по ключу в словаре мишеней. """
+        self.playground.delete(self.targets[position_of_target].id)
+        del self.targets[position_of_target]
+
 
 if __name__ == '__main__':
     game = GunGame()
